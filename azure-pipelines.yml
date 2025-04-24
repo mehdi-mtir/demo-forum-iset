@@ -17,3 +17,12 @@ steps:
     echo Add other tasks to build, test, and deploy your project.
     echo See https://aka.ms/yaml
   displayName: 'Run a multi-line script'
+
+- task: AzureFileCopy@6
+  inputs:
+    SourcePath: 'https://github.com/mehdi-mtir/demo-forum-iset'
+    azureSubscription: 'Visual Studio Enterprise Subscription(c00c2489-6fc6-4833-afef-7d5b5eb36f1a)'
+    Destination: 'AzureBlob'
+    storage: 'demoforumiset'
+    ContainerName: 'demo'
+    CleanTargetBeforeCopy: true
