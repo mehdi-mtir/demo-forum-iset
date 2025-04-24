@@ -18,11 +18,9 @@ steps:
     echo See https://aka.ms/yaml
   displayName: 'Run a multi-line script'
 
-- task: AzureFileCopy@6
+- task: CopyFiles@2
   inputs:
-    SourcePath: 'https://github.com/mehdi-mtir/demo-forum-iset'
-    azureSubscription: 'Visual Studio Enterprise Subscription(c00c2489-6fc6-4833-afef-7d5b5eb36f1a)'
-    Destination: 'AzureBlob'
-    storage: 'demoforumiset'
-    ContainerName: 'demo'
-    CleanTargetBeforeCopy: true
+    SourceFolder: 'https://github.com/mehdi-mtir/demo-forum-iset'
+    Contents: '**'
+    TargetFolder: 'https://demoforumiset.blob.core.windows.net/demo?sp=racw&st=2025-04-24T04:39:49Z&se=2025-04-24T12:39:49Z&spr=https&sv=2024-11-04&sr=c&sig=7fLw2N0VIQh31jWQIRc%2FnKVvOvc5XXSmCe80ZDj%2FVyQ%3D'
+    CleanTargetFolder: false
