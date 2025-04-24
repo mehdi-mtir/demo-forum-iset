@@ -1,26 +1,82 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
+# File: azure-pipelines.yml
 
 trigger:
-- main
+  branches:
+    include:
+      - main  # Trigger the pipeline when changes are pushed to main branch
 
 pool:
-  vmImage: ubuntu-latest
+  vmImage: 'ubuntu-latest'  # Use the latest Ubuntu VM as build agent
 
-steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+parameters:
+  - name: storageAccountName
+    type: string
+    default: 'demoforumiset'
+    displayName: 'Azure Storage Account Name'
+  
+  - name: blobContainerName
+    type: string
+    default: 'demo'
+    displayName: 'Blob Container Name'
+  
+  - name: sourceFolder
+    type: string
+    default: '$(Build.SourcesDirectory)'
+    displayName: 'Source Folder Path'
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+variables:
+  - group: azure-storage-credentials  # Reference to a variable group containing storage secrets
 
-- task: CopyFiles@2
-  inputs:
-    SourceFolder: 'https://github.com/mehdi-mtir/demo-forum-iset'
-    Contents: '**'
-    TargetFolder: 'https://demoforumiset.blob.core.windows.net/demo?sp=racw&st=2025-04-24T04:39:49Z&se=2025-04-24T12:39:49Z&spr=https&sv=2024-11-04&sr=c&sig=7fLw2N0VIQh31jWQIRc%2FnKVvOvc5XXSmCe80ZDj%2FVyQ%3D'
-    CleanTargetFolder: false
+stages:
+  - stage: Deploy
+    displayName: 'Deploy to Blob Storage'
+    jobs:
+      - job: CopyFiles
+        displayName: 'Copy Files to Blob Storage'
+        steps:
+          - checkout: self
+            fetchDepth: 1  # Shallow clone for better performance
+            
+          - task: AzureCLI@2
+            displayName: 'Upload to Blob Storage'
+            inputs:
+              azureSubscription: 'Visual Studio Enterprise Subscription(c00c2489-6fc6-4833-afef-7d5b5eb36f1a)'  # Name of your Azure service connection
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                echo "Starting upload to Azure Blob Storage..."
+                
+                # Install Azure Storage extension if not already installed
+                az extension add --name storage-preview --only-show-errors
+                
+                # Sync the entire directory to the blob container
+                az storage blob sync \
+                  --container ${{ parameters.blobContainerName }} \
+                  --account-name ${{ parameters.storageAccountName }} \
+                  --source ${{ parameters.sourceFolder }} \
+                  --recursive
+                
+                echo "Upload completed successfully."
+          
+          - task: PowerShell@2
+            displayName: 'Generate Deployment Report'
+            inputs:
+              targetType: 'inline'
+              script: |
+                Write-Host "Deployment completed at $(Get-Date)"
+                Write-Host "Files deployed to container: ${{ parameters.blobContainerName }}"
+                Write-Host "Storage account: ${{ parameters.storageAccountName }}"
+
+          - task: AzureCLI@2
+            displayName: 'Verify Deployment'
+            inputs:
+              azureSubscription: 'Visual Studio Enterprise Subscription(c00c2489-6fc6-4833-afef-7d5b5eb36f1a)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                # List the files in the container to verify upload
+                echo "Listing blobs in container to verify upload:"
+                az storage blob list \
+                  --container-name ${{ parameters.blobContainerName }} \
+                  --account-name ${{ parameters.storageAccountName }} \
+                  --output table
